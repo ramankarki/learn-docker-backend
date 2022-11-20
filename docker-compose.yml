@@ -1,0 +1,31 @@
+services:
+  node-app:
+    build:
+      context: .
+      target: dev
+    ports:
+      - 5000:5000
+    volumes:
+      - ./src:/app/src
+    environment:
+      MONGODB_URI: mongodb://root:example@mongo:27017/
+    networks:
+      - backend
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb:/data/db
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  mongodb:

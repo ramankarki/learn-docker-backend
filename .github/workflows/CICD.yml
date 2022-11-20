@@ -1,0 +1,47 @@
+name: 'CICD'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_push:
+    name: Build & Push to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Docker Build and Push to DockerHub
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ramankarki/learn-docker-backend
+          target: prod
+
+  # deploy_to_droplet:
+  #   runs-on: ubuntu-latest
+  #   needs: build_and_push
+  #   name: Deploy to Droplet
+  #   steps:
+  #     - name: Connect with SSH and Deploy
+  #       uses: appleboy/ssh-action@master
+  #       with:
+  #         host: ${{ secrets.SSH_HOST }}
+  #         username: ${{ secrets.SSH_USER }}
+  #         key: ${{ secrets.SSH_KEY }}
+  #         script: |
+  #           cd /boredapp
+  #           docker-compose stop bored-app
+  #           docker rm bored-spring
+  #           docker pull ilkerguldali/boredapp:latest
+  #           docker-compose up -d bored-app
+  #           docker ps -a
