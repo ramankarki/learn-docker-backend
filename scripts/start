@@ -1,0 +1,70 @@
+#!/bin/sh
+
+imageTag=''
+while getopts "t:" opt; do
+  case "$opt" in
+    t) imageTag=$OPTARG;;
+    /?);;
+  esac
+done
+
+if [ "$imageTag" = '' ]; then
+  echo "Missing -t tagname"
+  exit 1
+fi
+
+# Start process
+docker swarm init
+
+network=$(docker network inspect backend)
+if [ "$network" =  '[]' ]; then
+  docker network create --driver overlay --attachable backend
+  echo "backend network created"
+else
+  echo "backend network exists"
+fi
+
+volume=$(docker volume inspect mongodb)
+if [ "$volume" =  '[]' ]; then
+  docker volume create mongodb
+  echo "mongodb volume created"
+else
+  echo "mongodb volume exists"
+fi
+
+mongo=$(docker service inspect mongo)
+if [ "$mongo" =  '[]' ]; then
+  docker service create \
+  --name mongo \
+  --network backend \
+  --mount source=mongodb,destination=/data/db \
+  --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet" \
+  mongo
+  echo "mongo service created"
+else
+  echo "mongo service exists"
+fi
+
+backend=$(docker service inspect node-api)
+if [ "$backend" = '[]' ]; then
+  docker service create \
+  --name node-api \
+  --network backend \
+  -p 5000:5000 \
+  --env MONGODB_URI="mongodb://mongo:27017/db?directConnection=true&retryWrites=true" \
+  --replicas 6 \
+  --health-cmd "node src/healthcheck.js" \
+  --health-start-period 5s \
+  --health-timeout 5s \
+  --health-interval 5s \
+  --health-retries 3 \
+  --update-order start-first \
+  --update-failure-action rollback \
+  --update-delay 5s \
+  --restart-condition on-failure \
+  --restart-max-attempts 5 \
+  --restart-window 100s \
+  "ramankarki/learn-docker-backend:${imageTag}"
+else
+  docker service update --image "ramankarki/learn-docker-backend:${imageTag}" node-api
+fi

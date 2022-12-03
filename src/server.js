@@ -3,7 +3,6 @@ const app = express()
 const mongoose = require('mongoose')
 const cors = require('cors')
 const morgan = require('morgan')
-const axios = require('axios')
 const PORT = 5000
 
 app.use(express.json())
@@ -32,8 +31,16 @@ app
     res.json(post)
   })
 
+app.get('/healthcheck', (req, res) => {
+  res.status(200).json({ message: 'server is active' })
+})
+
+app.all('/*', (req, res) =>
+  res.status(400).json({ msg: 'route does not exist' })
+)
+
 mongoose
-  .connect(process.env.MONGODB_URI, {
+  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/db', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -46,12 +53,11 @@ mongoose
     process.on('unhandledRejection', (err) => {
       console.log('UNHANDLED REJECTION! Shutting down...')
       console.log(err)
-      server.stop(() => console.log('Process terminated!'))
     })
 
-    process.on('SIGTERM', () => {
+    process.on('SIGTERM', (err) => {
+      console.log(err)
       console.log('SIGTERM RECEIVED. Shutting down gracefully.')
-      server.close(() => console.log('Process terminated!'))
     })
   })
   .catch((err) => console.log(err))

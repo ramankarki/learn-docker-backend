@@ -24,7 +24,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ramankarki/learn-docker-backend
+          tags: ramankarki/learn-docker-backend:prod
           target: prod
 
   # deploy_to_droplet:
